@@ -1,15 +1,14 @@
 const mongoose = require('mongoose');
 
 const labelSchema = new mongoose.Schema({
-    type: {
+    of: {
         type: String,
         required: true,
         max:255,
     },
     name: {
-        type: [String],
+        type: String,
         required: true,
-        unique: true,
         max:255,
     },
 });
