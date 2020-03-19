@@ -1,4 +1,5 @@
 import React from 'react';
+import ListPost from './post/ListPost';
 //import './App.css';
 
 function App() {
@@ -10,11 +11,15 @@ function App() {
           <button id="loginButton">Login</button>
         </nav>
       </header>
-      <aside>
-        <form className="Filter">
-        </form>
-      </aside>
-      <div className="body"></div>
+      <main>
+        <aside>
+          <form className="Filter">
+          </form>
+        </aside>
+        <div className="Body">
+          <ListPost />
+        </div>
+      </main>
       <footer className="App-footer"></footer>
     </div>
   );

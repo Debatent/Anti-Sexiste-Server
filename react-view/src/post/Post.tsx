@@ -1,19 +1,21 @@
 import React from 'react'
-export interface PostProps { title: string; body: string; }
+import DataPost from '../data/DataPost'
 
-class Post extends React.Component<PostProps, {}>{
-    render(){
-        return(
-            <article>
-                <header>
-                    <h1>{this.props.title}</h1>
-                </header>
-                <p>{this.props.body}</p>
-                <footer>
-                </footer>
-            </article>
-        ) 
-    }
+function Post(props: DataPost) {
+    return(
+        <article>
+            <header>
+                <h1>{props.title}</h1>
+            </header>
+            <p>
+                {props.message}
+            </p>
+            <footer>
+                <p>{props.created}</p>
+                <p>Ça m'est arrivé aussi: {props.reaction}</p>
+            </footer>
+        </article>
+    ) 
 }
 
 export default Post
