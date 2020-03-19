@@ -3,15 +3,14 @@ const express = require('express');
 const router = express.Router();
 
 // Middlewares
-const wrap = require('async-middleware').wrap
+const {wrapAsync} = require('./middlewares/async');
 const {hardAdmin} = require('./middlewares/admin');
 
 // Model
 const Label = require('../models/Label');
 
 // Validation
-const labelValidation = require('../validation/label');
-
+const {labelValidation} = require('../validation/label');
 
 /** LABEL (CRUD) **/
 
@@ -30,7 +29,7 @@ router.get('/:of', function(req, res, next) {
 });
 
 /* Restricted admin area */
-router.use('/:of', wrap(hardAdmin));
+router.use('/:of', wrapAsync(hardAdmin));
 
 /* CREATE a label */
 router.post('/:of', async function(req, res, next) {

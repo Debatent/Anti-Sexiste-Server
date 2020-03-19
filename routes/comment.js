@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 // Middlewares
-const wrap = require('async-middleware').wrap
+const {wrapAsync} = require('./middlewares/async');
 const {hardAuth, softAuth} = require('./middlewares/authentication');
 const {softAdmin} = require('./middlewares/admin');
 
@@ -14,7 +14,7 @@ const Label = require('../models/Label');
 const User = require('../models/User');
 
 // Validation
-const commentValidation = require('../validation/comment');
+const {commentValidation} = require('../validation/comment');
 
 
 /** COMMENT (CRUD) **/
@@ -22,15 +22,16 @@ const commentValidation = require('../validation/comment');
 /* CREATE a comment */
 router.post('/:idPost', softAuth, async function(req, res, next) {
     // Looking for the author
+    let author;
     if (req.user) {
         const user = await User.findById(req.user._id)
             .select({pseudo:1})
             .exec()
             .catch(err => {res.status(400).json({message: err})});
-        const author = req.user.pseudo;
+        author = user.pseudo;
     }
     else {
-        const author = null;
+        author = null;
     }
 
     // Retrieving the post
@@ -63,7 +64,7 @@ router.post('/:idPost', softAuth, async function(req, res, next) {
 
     // Saving
     post.save()
-        .then(data => {res.status(201).json(data)})
+        .then(data => {res.status(201).json(data.comments[data.comments.length-1])})
         .catch(err => {res.status(400).json({message: err})});
 });
 
@@ -83,7 +84,7 @@ router.patch('/:idPost/:idComment', hardAuth, async function(req, res, next) {
 
     // Checking if the user is the author
     if (user.pseudo !== post.comments.id(req.params.idComment).author) {
-        res.status(403).send('Access Denied');
+        return res.status(403).send('Access Denied');
     }
 
     // Validating body fields
@@ -104,14 +105,13 @@ router.patch('/:idPost/:idComment', hardAuth, async function(req, res, next) {
 
     // Saving
     post.save()
-        .then(data => {res.status(200).json(data)})
+        .then(data => {res.status(200).json(data.comments.id(req.params.idComment))})
         .catch(err => {res.status(400).json({message: err})});
 });
 
 /* DELETE a comment */
-router.delete('/:idPost/:idComment', hardAuth);
-router.delete('/:idPost/:idComment', wrap(softAdmin));
-router.delete('/:idPost/:idComment', async function(req, res, next) {
+router.delete('/:idPost/:idComment', wrapAsync(softAdmin));
+router.delete('/:idPost/:idComment', hardAuth, async function(req, res, next) {
     // Looking for the author
     const user = await User.findById(req.user._id)
         .select({pseudo:1})
@@ -125,8 +125,9 @@ router.delete('/:idPost/:idComment', async function(req, res, next) {
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking if the user is the author or the admin
-    if (user.pseudo !== post.comments.id(req.params.idComment).author || ! req.admin) {
-        res.status(403).send('Access Denied');
+
+    if (!post.comments.id(req.params.idComment) || (user.pseudo !== post.comments.id(req.params.idComment).author && !req.admin ) ) {
+        return res.status(403).send('Access Denied');
     }
 
     // Removing the comment
@@ -134,7 +135,7 @@ router.delete('/:idPost/:idComment', async function(req, res, next) {
 
     // Saving
     post.save()
-        .then(data => {res.status(200).json(data)})
+        .then(data => {res.status(200).send('Success')})
         .catch(err => {res.status(400).json({message: err})});
 });
 
@@ -156,8 +157,8 @@ router.post('/:idPost/:idComment/like', hardAuth, async function(req, res, next)
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking with DB for unique like
-    if (user.commentReaction.find(req.params.idComment)) {
-        res.status(403).send('Access Denied');
+    if (user.commentReaction.length !== 0 && user.commentReaction.includes(req.params.idComment)) {
+        return res.status(403).send('Access Denied');
     }
 
     // Incrementing the reaction
@@ -165,8 +166,10 @@ router.post('/:idPost/:idComment/like', hardAuth, async function(req, res, next)
     user.commentReaction.push(req.params.idComment);
 
     // Saving
+    user.save()
+        .catch(err => {res.status(400).json({message: err})});
     post.save()
-        .then(data => {res.status(200).json(data)})
+        .then(data => {res.status(200).json(data.comments.id(req.params.idComment))})
         .catch(err => {res.status(400).json({message: err})});
 });
 
@@ -185,8 +188,8 @@ router.delete('/:idPost/:idComment/unlike', hardAuth, async function(req, res, n
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking with DB for unique like
-    if (!user.commentReaction.find(req.params.idComment)) {
-        res.status(403).send('Access Denied');
+    if (user.commentReaction.length === 0 || !user.commentReaction.includes(req.params.idComment)) {
+        return res.status(403).send('Access Denied');
     }
 
     // Incrementing the reaction
@@ -194,8 +197,10 @@ router.delete('/:idPost/:idComment/unlike', hardAuth, async function(req, res, n
     user.commentReaction.remove(req.params.idComment);
 
     // Saving
+    user.save()
+        .catch(err => {res.status(400).json({message: err})});
     post.save()
-        .then(data => {res.status(200).json(data)})
+        .then(data => {res.status(200).json(data.comments.id(req.params.idComment))})
         .catch(err => {res.status(400).json({message: err})});
 });
 
@@ -217,8 +222,8 @@ router.post('/:idPost/:idComment/report', hardAuth, async function(req, res, nex
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking with DB for unique report
-    if (user.commentReported.find(req.params.idComment)) {
-        res.status(403).send('Access Denied');
+    if (user.commentReported.length !== 0 && user.commentReported.includes(req.params.idComment)) {
+        return res.status(403).send('Access Denied');
     }
 
     // Incrementing the reaction
@@ -226,8 +231,10 @@ router.post('/:idPost/:idComment/report', hardAuth, async function(req, res, nex
     user.commentReported.push(req.params.idComment);
 
     // Saving
+    user.save()
+        .catch(err => {res.status(400).json({message: err})});
     post.save()
-        .then(data => {res.status(200).json(data)})
+        .then(data => {res.status(200).json(data.comments.id(req.params.idComment))})
         .catch(err => {res.status(400).json({message: err})});
 });
 

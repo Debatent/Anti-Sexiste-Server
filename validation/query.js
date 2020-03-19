@@ -9,11 +9,10 @@ const pageValidation = data => {
             .min(1)
             .integer()
             .default(1)
-            .required()
     });
 
     return schema.validateAsync(data);
 };
 
 
-module.exports.pageValidation = pageValidation();
+module.exports.pageValidation = pageValidation;

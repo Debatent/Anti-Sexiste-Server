@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 // Middlewares
-const wrap = require('async-middleware').wrap
+const {wrapAsync} = require('./middlewares/async');
 const {hardAuth, softAuth} = require('./middlewares/authentication');
 const {softAdmin} = require('./middlewares/admin');
 
@@ -16,8 +16,8 @@ const Label = require('../models/Label');
 const User = require('../models/User');
 
 // Validation
-const postValidation = require('../validation/post');
-const pageValidation = require('../validation/query');
+const {postValidation} = require('../validation/post');
+const {pageValidation} = require('../validation/query');
 
 
 /** POST (CRUD) **/
@@ -27,15 +27,22 @@ router.get('/', async function(req, res, next) {
     // Validating query fields
     try{
         await pageValidation(req.query);
+        if (!req.query.page){
+            req.query.page = 1;
+        }
     }
     catch (err) {
         return res.status(400).json({message: err});
     }
 
+    let postPerPage = 15;
+
     // Getting the posts
     Post.find()
         .sort({'createdAt': -1})
         .select({comments:0})
+        .skip(postPerPage*(req.query.page-1))
+        .limit(postPerPage)
         .exec()
         .then(data => res.status(200).json(data))
         .catch(err => {res.status(400).json({message: err})});
@@ -100,13 +107,13 @@ router.patch('/:idPost', hardAuth, async function(req, res, next) {
 
     // Retrieving the post
     const post = await Post.findById(req.params.idPost)
-        .select({comments:1})
+        .select({author:1})
         .exec()
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking if the user is the author
     if (user.pseudo !== post.author) {
-        res.status(403).send('Access Denied');
+        return res.status(403).send('Access Denied');
     }
 
     // Validating body fields
@@ -133,7 +140,7 @@ router.patch('/:idPost', hardAuth, async function(req, res, next) {
 });
 
 /* DELETE a post */
-router.delete('/:idPost', wrap(softAdmin));
+router.delete('/:idPost', wrapAsync(softAdmin));
 router.delete('/:idPost', hardAuth, async function(req, res, next) {
     // Looking for the author
     const user = await User.findById(req.user._id)
@@ -143,13 +150,13 @@ router.delete('/:idPost', hardAuth, async function(req, res, next) {
 
     // Retrieving the post
     const post = await Post.findById(req.params.idPost)
-        .select({comments:1})
+        .select({author:1})
         .exec()
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking if the user is the author or the admin
-    if (user.pseudo !== post.author || ! req.admin) {
-        res.status(403).send('Access Denied');
+    if ( !post || !post.author || (user.pseudo !== post.author && ! req.admin) ) {
+        return res.status(403).send('Access Denied');
     }
 
     // Deleting the post
@@ -176,8 +183,8 @@ router.post('/:idPost/like', hardAuth, async function(req, res, next) {
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking with DB for unique like
-    if (user.postReaction.find(post._id)) {
-        res.status(403).send('Access Denied');
+    if (user.postReaction.length !== 0 && user.postReaction.includes(post._id)) {
+        return res.status(403).send('Access Denied');
     }
 
     // Incrementing the reaction
@@ -185,6 +192,8 @@ router.post('/:idPost/like', hardAuth, async function(req, res, next) {
     user.postReaction.push(post._id);
 
     // Saving
+    user.save()
+        .catch(err => {res.status(400).json({message: err})});
     post.save()
         .then(data => {res.status(200).json(data)})
         .catch(err => {res.status(400).json({message: err})});
@@ -205,15 +214,17 @@ router.delete('/:idPost/unlike', hardAuth, async function(req, res, next) {
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking with DB for unique like
-    if (!user.postReaction.find(post._id)) {
-        res.status(403).send('Access Denied');
+    if (user.postReaction.length === 0 || !user.postReaction.includes(post._id)) {
+        return res.status(403).send('Access Denied');
     }
 
     // Incrementing the reaction
-    post.reaction -= 1 ;
+    post.reaction -= 1;
     user.postReaction.remove(post._id);
 
     // Saving
+    user.save()
+        .catch(err => {res.status(400).json({message: err})});
     post.save()
         .then(data => {res.status(200).json(data)})
         .catch(err => {res.status(400).json({message: err})});
@@ -237,15 +248,17 @@ router.post('/:idPost/report', hardAuth, async function(req, res, next) {
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking with DB for unique report
-    if (user.postReported.find(post._id)) {
-        res.status(403).send('Access Denied');
+    if (user.postReported.length !== 0 && user.postReported.includes(post._id)) {
+        return res.status(403).send('Access Denied');
     }
 
     // Incrementing the reaction
-    post.report += 1 ;
+    post.report += 1;
     user.postReported.push(post._id);
 
     // Saving
+    user.save()
+        .catch(err => {res.status(400).json({message: err})});
     post.save()
         .then(data => {res.status(200).json(data)})
         .catch(err => {res.status(400).json({message: err})});

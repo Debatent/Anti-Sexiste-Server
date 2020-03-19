@@ -15,56 +15,60 @@ const hardAdmin = async function (req, res, next) {
     // Valid token ?
     try {
         const verified = jwt.verify(token, process.env.TOKEN_SECRET);
-
-        // isAdmin ?
-        const user = await User.findById(req.user._id)
-            .select({isAdmin:1})
-            .exec()
-            .catch(err => {res.status(400).json({message: err})});
-        if (user.isAdmin) {
-            req.user = verified;
-            next();
-        }
-        else {
-            res.status(403).send('Access Denied');
-        }
+        req.user = verified;
     }
     catch (err) {
         res.status(400).send('Invalid Token');
+    }
+
+    // isAdmin ?
+    const user = await User.findById(req.user._id)
+        .select({isAdmin:1})
+        .exec()
+        .catch(err => {res.status(400).json({message: err})});
+    if (user && user.isAdmin) {
+        next();
+    }
+    else {
+        res.status(403).send('Access Denied');
     }
 };
 
 
 /* Get admin & log information */
 const softAdmin = async function (req, res, next) {
+    // Default
+    req.admin = false;
+    req.user = null;
+
     // Does the token exist?
     const token = req.header('auth-token');
-    if (!token) {
-        req.user = null;
-    }
-
-    // Valid token ?
-    else {
+    if (token) {
+        // Valid token ?
         try {
-            // User
             const verified = jwt.verify(token, process.env.TOKEN_SECRET);
             req.user = verified;
-
-            // Admin
-            const user = await User.findById(req.user._id)
-                .select({isAdmin:1})
-                .exec()
-                .catch(err => {res.status(400).json({message: err})});
-
-            req.admin = user.isAdmin;
         }
-        catch (err) {
-            req.user = null;
+        catch (err) { /*already set in default*/}
+
+        // isUser?
+        if (req.user) {
+            const user = await User.findById(req.user._id)
+                .select({isAdmin: 1})
+                .exec()
+                .catch(err => {
+                    res.status(400).json({message: err})
+                });
+
+            // isAdmin?
+            if (user) {
+                req.admin = user.isAdmin;
+            }
         }
     }
     next();
 };
 
 
-module.exports.hardAdmin = hardAdmin();
-module.exports.softAdmin = softAdmin();
+module.exports.hardAdmin = hardAdmin;
+module.exports.softAdmin = softAdmin;
