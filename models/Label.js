@@ -4,12 +4,14 @@ const labelSchema = new mongoose.Schema({
     of: {
         type: String,
         required: true,
-        max:255,
+        min:1,
+        max:32,
     },
     name: {
         type: String,
         required: true,
-        max:255,
+        min:1,
+        max:32,
     },
 });
 

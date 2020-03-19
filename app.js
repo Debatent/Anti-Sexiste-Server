@@ -1,4 +1,4 @@
-//Imports
+// Dependencies
 var createError = require('http-errors');
 var path = require('path');
 var cookieParser = require('cookie-parser');
@@ -36,7 +36,7 @@ app.use('/', indexRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  next(createError(404));
+  next(createError(418));
 });
 
 // error handler
