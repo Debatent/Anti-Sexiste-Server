@@ -67,6 +67,7 @@ router.post('/login', async function(req, res, next) {
     var user = null;
     try {
         await emailValidation({user: req.body.user});
+        // This is an email
         user = await User.findOne({email: req.body.user});
         if (!user) return res.status(400).send('Email or pseudo incorrect');
     }
@@ -81,7 +82,14 @@ router.post('/login', async function(req, res, next) {
 
     // Assigning a token
     const token = jwt.sign({_id: user.id},process.env.TOKEN_SECRET);
-    res.header('auth-token', token).status(301).redirect('/');
+    res.header('auth-token', token).status(200).json({
+        _id: user._id,
+        pseudo: user.pseudo,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        postReaction: user.postReaction,
+        commentReaction: user.commentReaction,
+    });
 });
 
 
