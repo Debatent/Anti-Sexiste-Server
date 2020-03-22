@@ -17,7 +17,7 @@ const User = require('../models/User');
 
 // Validation
 const {postValidation} = require('../validation/post');
-const {pageValidation} = require('../validation/query');
+const {pageValidation, queryValidation} = require('../validation/query');
 
 
 /** POST (CRUD) **/
@@ -26,22 +26,30 @@ const {pageValidation} = require('../validation/query');
 router.get('/', async function(req, res, next) {
     // Validating query fields
     try{
-        await pageValidation(req.query);
-        if (!req.query.page){
-            req.query.page = 1;
-        }
+        await queryValidation(req.query);
     }
     catch (err) {
+        console.log(err);
         return res.status(400).json({message: err});
     }
 
+    // Query choices
+    let pageChoice;
     let postPerPage = 15;
+    let sortChoice;
+    let labelChoice;
+
+    if (!req.query.page){ pageChoice = 1; }
+    else { pageChoice = req.query.page; }
+    if (!req.query.sort){ sortChoice = {createdAt: -1}; }
+    else { sortChoice = { reaction: -1}; }
+    if (!req.query.label){ labelChoice = {} ; }
+    else { labelChoice = { location: req.query.label}; }
 
     // Getting the posts
-    Post.find()
-        .sort({'createdAt': -1})
-        .select({comments:0})
-        .skip(postPerPage*(req.query.page-1))
+    Post.find(labelChoice)
+        .sort(sortChoice)
+        .skip(postPerPage*(pageChoice-1))
         .limit(postPerPage)
         .exec()
         .then(data => res.status(200).json(data))

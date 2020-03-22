@@ -3,7 +3,6 @@ var createError = require('http-errors');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var cors = require('cors');
 
 // Environment const
 const dotenv = require('dotenv');
@@ -30,7 +29,6 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
 // Cross domain
-// app.use(cors());
 // Add headers
 app.use(function (req, res, next) {
 
