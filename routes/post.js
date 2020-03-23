@@ -29,7 +29,6 @@ router.get('/', async function(req, res, next) {
         await queryValidation(req.query);
     }
     catch (err) {
-        console.log(err);
         return res.status(400).json({message: err});
     }
 
@@ -39,12 +38,19 @@ router.get('/', async function(req, res, next) {
     let sortChoice;
     let labelChoice;
 
-    if (!req.query.page){ pageChoice = 1; }
+    if (!req.query.page) { pageChoice = 1; }
     else { pageChoice = req.query.page; }
-    if (!req.query.sort){ sortChoice = {createdAt: -1}; }
+
+    if (!req.query.sort || req.query.sort === "latest") { sortChoice = {createdAt: -1}; }
     else { sortChoice = { reaction: -1}; }
-    if (!req.query.label){ labelChoice = {} ; }
-    else { labelChoice = { location: req.query.label}; }
+
+    if (!req.query.label || req.query.label === "all") { labelChoice = {}; }
+    else {
+        // Checking with DB for existing locations
+        const labelExist = await Label.findOne({of: 'posts', name: req.query.label});
+        if (!labelExist) return res.status(400).send("Location doesn't exist");
+        labelChoice = { location: req.query.label};
+    }
 
     // Getting the posts
     Post.find(labelChoice)
