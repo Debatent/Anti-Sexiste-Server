@@ -43,12 +43,18 @@ router.post('/register', async function(req, res, next) {
         password: hashedPassword,
     });
 
+    // Assigning a token
+    const token = jwt.sign({_id: user.id},process.env.TOKEN_SECRET);
+
     // Saving
     user.save()
-        .then(data => {res.status(201).json({
-            _id: data._id,
-            pseudo: data.pseudo,
-            email: data.email,
+        .then(data => {res.header('auth-token', token).status(201).json({
+            _id: user._id,
+            pseudo: user.pseudo,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            postReaction: user.postReaction,
+            commentReaction: user.commentReaction,
         })})
         .catch(err => {res.status(400).json({message: err})});
 });
@@ -82,6 +88,7 @@ router.post('/login', async function(req, res, next) {
 
     // Assigning a token
     const token = jwt.sign({_id: user.id},process.env.TOKEN_SECRET);
+
     res.header('auth-token', token).status(200).json({
         _id: user._id,
         pseudo: user.pseudo,
