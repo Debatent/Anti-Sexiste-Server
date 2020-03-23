@@ -39,7 +39,7 @@ app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
 
   // Request headers you wish to allow
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With,content-type, Accept');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With,content-type, Accept, auth-token');
 
   // Request headers you wish to expose
   res.setHeader('Access-Control-Expose-Headers', 'auth-token');
@@ -47,6 +47,11 @@ app.use(function (req, res, next) {
   // Set to true if you need the website to include cookies in the requests sent
   // to the API (e.g. in case you use sessions)
   res.setHeader('Access-Control-Allow-Credentials', true);
+
+  // Allow OPTIONS everywhere avoiding auth middleware to stop like it was another request and give a 401
+  if('OPTIONS' === req.method) {
+    return res.status(204).send();
+  }
 
   // Pass to next layer of middleware
   next();

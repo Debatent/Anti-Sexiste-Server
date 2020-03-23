@@ -45,7 +45,7 @@ router.get('/:of', async function(req, res, next) {
         // Getting the list of reported posts
         Post.find({report:{$gt:0}})
             .sort({report: -1})
-            .select({comments: 1})
+            .select({})
             .skip(commentPerPage*(req.query.page-1))
             .limit(commentPerPage)
             .exec()
