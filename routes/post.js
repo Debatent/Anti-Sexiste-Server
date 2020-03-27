@@ -169,7 +169,8 @@ router.delete('/:idPost', hardAuth, async function(req, res, next) {
         .catch(err => {res.status(400).json({message: err})});
 
     // Checking if the user is the author or the admin
-    if ( !post || !post.author || (user.pseudo !== post.author && ! req.admin) ) {
+    if ( !post || (!post.author && !req.admin) || (user.pseudo !== post.author && !req.admin) ) {
+        console.log(!post.author);
         return res.status(403).send('Access Denied');
     }
 
